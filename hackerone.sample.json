@@ -1,0 +1,7 @@
+{
+  "manual": "Place one level higher than hackerone.php. Configuration at https://hackerone.com/nextcloud/webhooks",
+  "hackerone-secret": "…",
+  "nextcloud-secret": "…",
+  "server": "https://cloud.example.tld/",
+  "conversation": "Y0urT0k3n"
+}
