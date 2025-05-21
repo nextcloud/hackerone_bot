@@ -133,18 +133,28 @@ if ($reporterName !== '') {
 	$reporterName = sanitizeStringForTalkMessage(' by ' . $reporterName);
 }
 
+$day = (new \DateTime())->format('D');
+$triage = '';
+if (isset($config['triage'][$day])) {
+	$triage = "\n\n" . 'Triage: @' . $config['triage'][$day];
+}
+
 if ($event === 'report_new') {
 	sendChatMessage(
 		$config,
 		$delivery,
 		'🚨 HackerOne issue reset to new' . $reporterName . "\n\n"
 		. $title
-		. 'https://hackerone.com/reports/' . $data['data']['report']['id']);
+		. 'https://hackerone.com/reports/' . $data['data']['report']['id']
+		. $triage
+	);
 } elseif ($event === 'report_created') {
 	sendChatMessage(
 		$config,
 		$delivery,
 		'🚨 New HackerOne issue' . $reporterName . "\n\n"
 		. $title
-		. 'https://hackerone.com/reports/' . $data['data']['report']['id']);
+		. 'https://hackerone.com/reports/' . $data['data']['report']['id']
+		. $triage
+	);
 }
