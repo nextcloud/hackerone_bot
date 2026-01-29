@@ -136,7 +136,17 @@ if ($reporterName !== '') {
 $day = (new \DateTime())->format('D');
 $triage = '';
 if (isset($config['triage'][$day])) {
-	$triage = "\n\n" . 'Triage: @' . $config['triage'][$day];
+	$triager = $config['triage'][$day];
+	if (strpos($config['triage'][$day], '|')) {
+		$triagers = explode('|', $config['triage'][$day]);
+		if (count($triagers) === 1) {
+			$triager = $triagers[0];
+		} else {
+			$week = (new \DateTime())->format('W');
+			$triager = $triagers[$week % count($triagers)];
+		}
+	}
+	$triage = "\n\n" . 'Triage: @' . $triager;
 }
 
 if ($event === 'report_new') {
