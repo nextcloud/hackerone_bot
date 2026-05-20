@@ -5,12 +5,12 @@
   "server": "https://cloud.example.tld/",
   "conversation": "Y0urT0k3n",
   "triage": {
-    "Mon": "anna",
-    "Tue": "anna",
-    "Wed": "dorra",
-    "Thu": "dorra",
-    "Fri": "joas",
-    "Sat": "joas",
-    "Sun": "joas"
+    "cycle_start": "2026-05-18",
+    "schedule": [
+      ["Dorra", "Anna", "Kate", "Daniel", "Dorra"],
+      ["Anna", "Kate", "Daniel", "Anna", "Dorra"],
+      ["Daniel", "Kate", "Anna", "Dorra", "Daniel"],
+      ["Kate", "Anna", "Dorra", "Kate", "Daniel"]
+    ]
   }
 }

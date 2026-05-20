@@ -27,6 +27,35 @@ function sanitizeStringForTalkMessage(string $text): string {
 	return str_replace(['@', 'http://', 'https://'], ['👤', '🔗', '🔗🔒'], $text);
 }
 
+function getTriagePerson(array $triageConfig, \DateTimeImmutable $date): ?string {
+	if (empty($triageConfig['cycle_start']) || empty($triageConfig['schedule'])) {
+		return null;
+	}
+
+	$schedule = $triageConfig['schedule'];
+	$utc = new \DateTimeZone('UTC');
+	$date = \DateTimeImmutable::createFromFormat('Y-m-d', $date->format('Y-m-d'), $utc);
+	$dow = (int)$date->format('w'); // 0=Sun … 6=Sat
+
+	// Forward weekends to the next Monday
+	if ($dow === 0 || $dow === 6) {
+		$daysUntilMonday = $dow === 6 ? 2 : 1;
+		return getTriagePerson($triageConfig, $date->modify('+' . $daysUntilMonday . ' days'));
+	}
+
+	$cycleStart = \DateTimeImmutable::createFromFormat('Y-m-d', $triageConfig['cycle_start'], $utc);
+	if ($cycleStart === false) {
+		return null;
+	}
+
+	$daysDiff = (int)floor(($date->getTimestamp() - $cycleStart->getTimestamp()) / 86400);
+	$cycleLength = count($schedule);
+	$weekIndex = ((intdiv($daysDiff, 7) % $cycleLength) + $cycleLength) % $cycleLength;
+	$dayIndex = $dow - 1; // Mon=0 … Fri=4
+
+	return $schedule[$weekIndex][$dayIndex] ?? null;
+}
+
 function sendChatMessage(array $config, string $referenceId, string $message): void {
 	$body = [
 		'message' => $message,
@@ -133,20 +162,12 @@ if ($reporterName !== '') {
 	$reporterName = sanitizeStringForTalkMessage(' by ' . $reporterName);
 }
 
-$day = (new \DateTime())->format('D');
 $triage = '';
-if (isset($config['triage'][$day])) {
-	$triager = $config['triage'][$day];
-	if (strpos($config['triage'][$day], '|')) {
-		$triagers = explode('|', $config['triage'][$day]);
-		if (count($triagers) === 1) {
-			$triager = $triagers[0];
-		} else {
-			$week = (new \DateTime())->format('W');
-			$triager = $triagers[$week % count($triagers)];
-		}
+if (!empty($config['triage'])) {
+	$triager = getTriagePerson($config['triage'], new \DateTimeImmutable());
+	if ($triager !== null) {
+		$triage = "\n\n" . 'Triage: @' . $triager;
 	}
-	$triage = "\n\n" . 'Triage: @' . $triager;
 }
 
 if ($event === 'report_new') {
