@@ -61,8 +61,8 @@ function getTriagePerson(array $config, \DateTimeInterface $dateTime): string {
 	}
 
 	$triager = $config['triage'][$day];
-	if (strpos($config['triage'][$day], '|')) {
-		$triagers = array_filter(array_map(trim(...), explode('|', $config['triage'][$day])));
+	if (strpos($triager, '|')) {
+		$triagers = array_filter(array_map(trim(...), explode('|', $triager)));
 		if (count($triagers) === 1) {
 			return $triagers[0];
 		}
@@ -70,7 +70,7 @@ function getTriagePerson(array $config, \DateTimeInterface $dateTime): string {
 		$week = $dateTime->format('W');
 		return $triagers[$week % count($triagers)];
 	}
-	return $config['triage'][$day];
+	return $triager;
 }
 
 $signature = $_SERVER['HTTP_X_NEXTCLOUD_TALK_SIGNATURE'] ?? '';
@@ -152,7 +152,7 @@ if ($reporterName !== '') {
 	$reporterName = ' by ' . $reporterName;
 }
 
-$dateTime = new \DateTime();
+$dateTime = new \DateTime('now', new \DateTimeZone('Europe/Berlin'));
 $triage = getTriagePerson($config, $dateTime);
 if ($triage !== '') {
 	$triage = "\n\n" . 'Triage: @' . $triage;
