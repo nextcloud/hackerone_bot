@@ -24,7 +24,7 @@ declare(strict_types=1);
  */
 
 function sanitizeStringForTalkMessage(string $text): string {
-	return str_replace(['@', 'http://', 'https://'], ['👤', '🔗', '🔗🔒'], $text);
+	return '`' . str_replace('`', '``', $text) . '`';
 }
 
 function sendChatMessage(array $config, string $referenceId, string $message): void {
@@ -52,6 +52,25 @@ function sendChatMessage(array $config, string $referenceId, string $message): v
 	]);
 	curl_exec($ch);
 	curl_close($ch);
+}
+
+function getTriagePerson(array $config, \DateTimeInterface $dateTime): string {
+	$day = $dateTime->format('D');
+	if (!isset($config['triage'][$day])) {
+		return '';
+	}
+
+	$triager = $config['triage'][$day];
+	if (strpos($triager, '|')) {
+		$triagers = array_filter(array_map(trim(...), explode('|', $triager)));
+		if (count($triagers) === 1) {
+			return $triagers[0];
+		}
+
+		$week = $dateTime->format('W');
+		return $triagers[$week % count($triagers)];
+	}
+	return $triager;
 }
 
 $signature = $_SERVER['HTTP_X_NEXTCLOUD_TALK_SIGNATURE'] ?? '';
@@ -118,35 +137,25 @@ if (!empty($data['data']['report']['attributes']['title'])) {
 
 $reporterName = '';
 if (!empty($data['data']['report']['relationships']['reporter']['data']['attributes']['name'])) {
-	$reporterName = $data['data']['report']['relationships']['reporter']['data']['attributes']['name'];
+	$reporterName = sanitizeStringForTalkMessage($data['data']['report']['relationships']['reporter']['data']['attributes']['name']);
 }
 
 if (!empty($data['data']['report']['relationships']['reporter']['data']['attributes']['username'])) {
 	if ($reporterName !== '') {
-		$reporterName = $data['data']['report']['relationships']['reporter']['data']['attributes']['username'] . ' (' . $reporterName . ')';
+		$reporterName = sanitizeStringForTalkMessage($data['data']['report']['relationships']['reporter']['data']['attributes']['username']) . ' (' . $reporterName . ')';
 	} else {
-		$reporterName = $data['data']['report']['relationships']['reporter']['data']['attributes']['username'];
+		$reporterName = sanitizeStringForTalkMessage($data['data']['report']['relationships']['reporter']['data']['attributes']['username']);
 	}
 }
 
 if ($reporterName !== '') {
-	$reporterName = sanitizeStringForTalkMessage(' by ' . $reporterName);
+	$reporterName = ' by ' . $reporterName;
 }
 
-$day = (new \DateTime())->format('D');
-$triage = '';
-if (isset($config['triage'][$day])) {
-	$triager = $config['triage'][$day];
-	if (strpos($config['triage'][$day], '|')) {
-		$triagers = explode('|', $config['triage'][$day]);
-		if (count($triagers) === 1) {
-			$triager = $triagers[0];
-		} else {
-			$week = (new \DateTime())->format('W');
-			$triager = $triagers[$week % count($triagers)];
-		}
-	}
-	$triage = "\n\n" . 'Triage: @' . $triager;
+$dateTime = new \DateTime('now', new \DateTimeZone('Europe/Berlin'));
+$triage = getTriagePerson($config, $dateTime);
+if ($triage !== '') {
+	$triage = "\n\n" . 'Triage: @' . $triage;
 }
 
 if ($event === 'report_new') {
