@@ -77,6 +77,11 @@ if ($config === null) {
 	return;
 }
 
+if (isset($_REQUEST['monitoring'])) {
+	echo '{"status":"OK"}';
+	return;
+}
+
 $delivery = $_SERVER['HTTP_X_H1_DELIVERY'] ?? '';
 $event = $_SERVER['HTTP_X_H1_EVENT'] ?? '';
 $signature = $_SERVER['HTTP_X_H1_SIGNATURE'] ?? '';
