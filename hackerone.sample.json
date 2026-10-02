@@ -5,12 +5,12 @@
   "server": "https://cloud.example.tld/",
   "conversation": "Y0urT0k3n",
   "triage": {
-    "Mon": "kate|dorra|anna|danielk",
+    "Mon": "danielk|kate|anna",
     "Tue": "anna",
     "Wed": "kate",
     "Thu": "danielk",
-    "Fri": "dorra",
-    "Sat": "dorra|anna|danielk|kate",
-    "Sun": "dorra|anna|danielk|kate"
+    "Fri": "kate|anna|danielk",
+    "Sat": "kate|anna|danielk",
+    "Sun": "kate|anna|danielk"
   }
 }
