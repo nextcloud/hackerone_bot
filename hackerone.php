@@ -8,7 +8,7 @@ declare(strict_types=1);
  */
 
 function sanitizeStringForTalkMessage(string $text): string {
-	return '`' . str_replace('`', '``', $text) . '`';
+	return '`' . str_replace('`', '', $text) . '`';
 }
 
 function sendChatMessage(array $config, string $referenceId, string $message): void {
