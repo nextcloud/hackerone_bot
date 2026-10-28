@@ -4,6 +4,7 @@
   "nextcloud-secret": "…",
   "server": "https://cloud.example.tld/",
   "conversation": "Y0urT0k3n",
+  "skip-reporters": [],
   "triage": {
     "Mon": "danielk|kate|anna",
     "Tue": "anna",

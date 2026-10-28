@@ -119,6 +119,11 @@ if (empty($data['data']['report']['id'])) {
 	return;
 }
 
+$reporterUsername = $data['data']['report']['relationships']['reporter']['data']['attributes']['username'] ?? '';
+if (in_array($reporterUsername, $config['skip-reporters'] ?? [], true)) {
+	return;
+}
+
 $title = '';
 if (!empty($data['data']['report']['attributes']['title'])) {
 	$title = sanitizeStringForTalkMessage($data['data']['report']['attributes']['title']) . "\n\n";
@@ -129,11 +134,11 @@ if (!empty($data['data']['report']['relationships']['reporter']['data']['attribu
 	$reporterName = sanitizeStringForTalkMessage($data['data']['report']['relationships']['reporter']['data']['attributes']['name']);
 }
 
-if (!empty($data['data']['report']['relationships']['reporter']['data']['attributes']['username'])) {
+if ($reporterUsername !== '') {
 	if ($reporterName !== '') {
-		$reporterName = sanitizeStringForTalkMessage($data['data']['report']['relationships']['reporter']['data']['attributes']['username']) . ' (' . $reporterName . ')';
+		$reporterName = sanitizeStringForTalkMessage($reporterUsername) . ' (' . $reporterName . ')';
 	} else {
-		$reporterName = sanitizeStringForTalkMessage($data['data']['report']['relationships']['reporter']['data']['attributes']['username']);
+		$reporterName = sanitizeStringForTalkMessage($reporterUsername);
 	}
 }
 
