@@ -8,7 +8,10 @@ declare(strict_types=1);
  */
 
 function sanitizeStringForTalkMessage(string $text): string {
-	return '`' . str_replace('`', '``', $text) . '`';
+	// Delimiter must be longer than any backtick run inside, spaces keep edge backticks from merging with it
+	preg_match_all('/`+/', $text, $matches);
+	$delimiter = str_repeat('`', max([0, ...array_map(strlen(...), $matches[0])]) + 1);
+	return $delimiter . ' ' . $text . ' ' . $delimiter;
 }
 
 function sendChatMessage(array $config, string $referenceId, string $message): void {
