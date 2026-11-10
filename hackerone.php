@@ -7,6 +7,8 @@ declare(strict_types=1);
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+const USER_AGENT = 'nextcloud-talk-hackerone-adapter/1.0';
+
 function sanitizeStringForTalkMessage(string $text): string {
 	// Delimiter must be longer than any backtick run inside, spaces keep edge backticks from merging with it
 	preg_match_all('/`+/', $text, $matches);
@@ -29,7 +31,7 @@ function sendChatMessage(array $config, string $referenceId, string $message): v
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 	curl_setopt($ch, CURLOPT_POST, 1);
 	curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonBody);
-	curl_setopt($ch, CURLOPT_USERAGENT, 'nextcloud-talk-hackerone-adapter/1.0');
+	curl_setopt($ch, CURLOPT_USERAGENT, USER_AGENT);
 	curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 	curl_setopt($ch, CURLOPT_HTTPHEADER, [
 		'OCS-APIRequest: true',
@@ -41,23 +43,49 @@ function sendChatMessage(array $config, string $referenceId, string $message): v
 	curl_close($ch);
 }
 
-function getTriagePerson(array $config, \DateTimeInterface $dateTime): string {
-	$day = $dateTime->format('D');
-	if (!isset($config['triage'][$day])) {
-		return '';
+function fetchTriageCalendar(string $url, \DateTimeImmutable $day): ?string {
+	if (str_contains($url, '?')) {
+		return null;
 	}
 
-	$triager = $config['triage'][$day];
-	if (strpos($triager, '|')) {
-		$triagers = array_filter(array_map(trim(...), explode('|', $triager)));
-		if (count($triagers) === 1) {
-			return $triagers[0];
+	$ch = curl_init($url . '?' . http_build_query([
+		'export' => '',
+		'expand' => 1,
+		'start' => $day->modify('-1 day')->getTimestamp(),
+		'end' => $day->modify('+2 day')->getTimestamp(),
+	]));
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+	curl_setopt($ch, CURLOPT_USERAGENT, USER_AGENT);
+	$ics = curl_exec($ch);
+	$status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+	curl_close($ch);
+	return $ics === false || $status !== 200 ? null : $ics;
+}
+
+function getTriagePeople(string $ics, \DateTimeImmutable $day): array {
+	// Unfold continuation lines (RFC 5545 3.1)
+	$ics = preg_replace('/\r?\n[ \t]/', '', $ics);
+	$date = $day->format('Ymd');
+	$people = [];
+	preg_match_all('/^BEGIN:VEVENT\r?$(.*?)^END:VEVENT\r?$/ms', $ics, $events);
+	foreach ($events[1] as $event) {
+		preg_match('/^DTSTART[^:\r\n]*:(\d{8})/m', $event, $start);
+		preg_match('/^DTEND[^:\r\n]*:(\d{8})/m', $event, $end);
+		preg_match('/^SUMMARY[^:\r\n]*:(.*?)\r?$/m', $event, $summary);
+		preg_match('/^CLASS[^:\r\n]*:(\S+)/m', $event, $class);
+		$person = trim(stripcslashes($summary[1] ?? ''));
+		// Confidential events are exported with a translated "Busy" summary
+		if (!$start || !preg_match('/^[a-z]+$/', $person) || ($class[1] ?? 'PUBLIC') !== 'PUBLIC') {
+			continue;
 		}
-
-		$week = $dateTime->format('W');
-		return $triagers[$week % count($triagers)];
+		// DTEND is exclusive
+		$endDate = $end[1] ?? $start[1];
+		if ($start[1] <= $date && ($date < $endDate || $date === $start[1])) {
+			$people[] = $person;
+		}
 	}
-	return $triager;
+	return array_unique($people);
 }
 
 $signature = $_SERVER['HTTP_X_NEXTCLOUD_TALK_SIGNATURE'] ?? '';
@@ -122,6 +150,10 @@ if (empty($data['data']['report']['id'])) {
 	return;
 }
 
+if ($event !== 'report_new' && $event !== 'report_created') {
+	return;
+}
+
 $reporterUsername = $data['data']['report']['relationships']['reporter']['data']['attributes']['username'] ?? '';
 if (in_array($reporterUsername, $config['skip-reporters'] ?? [], true)) {
 	return;
@@ -149,10 +181,16 @@ if ($reporterName !== '') {
 	$reporterName = ' by ' . $reporterName;
 }
 
-$dateTime = new \DateTime('now', new \DateTimeZone('Europe/Berlin'));
-$triage = getTriagePerson($config, $dateTime);
-if ($triage !== '') {
-	$triage = "\n\n" . 'Triage: @' . $triage;
+$triage = '';
+if (!empty($config['triage-calendar'])) {
+	$today = new \DateTimeImmutable('now', new \DateTimeZone('Europe/Berlin'));
+	$ics = fetchTriageCalendar($config['triage-calendar'], $today);
+	$people = $ics === null ? [] : getTriagePeople($ics, $today);
+	$triage = "\n\nTriage: " . match (true) {
+		$ics === null => '@all (triage calendar unavailable)',
+		$people === [] => '@all',
+		default => '@' . implode(' @', $people),
+	};
 }
 
 if ($event === 'report_new') {

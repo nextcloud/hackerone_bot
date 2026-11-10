@@ -14,6 +14,7 @@ A bot that posts HackerOne reports into a Nextcloud Talk chat room.
    2. Generate a 64 character long **different** secrets and store as:`hackerone-secret`
    3. Add your Nextcloud server URL as `server`
    4. Add your conversation token from step 1. as `conversation`
+   5. Add the public link of the triage calendar as `triage-calendar` (see below)
 
 5. Navigate to your HackerOne program webhooks: https://hackerone.com/nextcloud/webhooks
 6. Configure a webhook:
@@ -46,3 +47,14 @@ A bot that posts HackerOne reports into a Nextcloud Talk chat room.
        '<token from step 4.4>'
    ```
    
+
+## Triage calendar
+
+The bot mentions the person on triage, read from a shared Nextcloud calendar:
+
+1. Create a calendar and share it with edit rights with the triagers
+2. Enable "Share link", copy the subscription link and add it as `https://` link **without** `?export` as `triage-calendar` in `hackerone.json`:
+   `https://<server>/remote.php/dav/public-calendars/<token>`
+3. Triagers sign up with an all-day event whose title is their Nextcloud user ID (lowercase a-z only), with visibility "Show full event"
+
+If nobody signed up for the day, or the calendar can't be read (e.g. the link still contains `?export`), the bot mentions `@all`.
