@@ -5,13 +5,5 @@
   "server": "https://cloud.example.tld/",
   "conversation": "Y0urT0k3n",
   "skip-reporters": [],
-  "triage": {
-    "Mon": "danielk|kate|anna",
-    "Tue": "anna",
-    "Wed": "kate",
-    "Thu": "danielk",
-    "Fri": "kate|anna|danielk",
-    "Sat": "kate|anna|danielk",
-    "Sun": "kate|anna|danielk"
-  }
+  "triage-calendar": "https://cloud.example.tld/remote.php/dav/public-calendars/<token>"
 }
